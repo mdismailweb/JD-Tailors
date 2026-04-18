@@ -16,10 +16,18 @@
 const SHEET_ID = '144jVRjgBMjr2hHx27h3uhRbHB6rZDhFws01WI6-jLBg'; 
 const FOLDER_ID = '11HUkBatWCNpM38jO_lDhsEAPKDybMT-A';
 
+// RUN THIS FUNCTION ONCE IN THE EDITOR TO AUTHORIZE GOOGLE DRIVE & SHEETS
+function setup() {
+  SpreadsheetApp.openById(SHEET_ID);
+  DriveApp.getFolderById(FOLDER_ID);
+  console.log("Authorization successful!");
+}
+
 // Handle GET requests (Search by Number, Name or Customer Number)
 function doGet(e) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+    let sheet = SpreadsheetApp.openById(SHEET_ID).getSheets().find(s => s.getName().trim().toLowerCase() === 'customers');
+    if (!sheet) sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
     
@@ -77,7 +85,8 @@ function doGet(e) {
 // Handle POST requests (Create new customer)
 function doPost(e) {
   try {
-    const sheet = SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+    let sheet = SpreadsheetApp.openById(SHEET_ID).getSheets().find(s => s.getName().trim().toLowerCase() === 'customers');
+    if (!sheet) sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
     const parsedData = JSON.parse(e.postData.contents);
     
     const customerId = parsedData.customerId;
@@ -103,9 +112,13 @@ function doPost(e) {
       const folder = DriveApp.getFolderById(FOLDER_ID);
       const file = folder.createFile(blob);
       
-      // Allow anybody with link to view image so it can be previewed in app
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      fileUrl = file.getDownloadUrl(); // alternatively use file.getUrl();
+      // Try to allow viewing in the app. If Google Workspace blocks public sharing, catch and ignore.
+      try {
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      } catch (sharingError) {
+        console.warn("Public sharing is blocked by Google Workspace. Image will remain private.", sharingError);
+      }
+      fileUrl = file.getDownloadUrl() || file.getUrl();
     }
     
     // Append to sheet (Make sure your sheet headers match this order)

@@ -1,7 +1,7 @@
 // API Service to communicate with Google Apps Script Backend
 
 // This URL needs to be updated with the Web App URL generated from Google Apps Script.
-export const API_URL = "https://script.google.com/macros/s/AKfycbzsgwv8MzqOtuMltxPRSGfENsxmv9TbV3h6sx0Y570UXH-s3fOenHB--ZwN0ciZ2Ju3/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbxpLvkjZOYehOSOHVRMgUyyqedEM886lh-p1xjbwy7Ueddv-9Lm_DkMPYt968zZyoW8/exec";
 
 /**
  * Perform a generic fetch to the Apps Script with no-cors / cors mapping.
@@ -24,7 +24,12 @@ export async function addCustomer(customerData) {
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error("Error adding customer:", error);
+    if (error.message === "Failed to fetch" || error.message.includes("NetworkError")) {
+      return {
+        success: false,
+        error: "Google Apps Script blocked the connection. Please verify two things: 1. You deployed the script with Access set exactly to 'Anyone' (not 'Anyone with Google account'). 2. After making code changes, you selected 'New version' when managing deployments."
+      };
+    }
     return { success: false, error: error.message };
   }
 }
