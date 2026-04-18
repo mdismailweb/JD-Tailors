@@ -51,19 +51,59 @@ function doGet(e) {
     const nameIdx = headers.findIndex(h => h.toLowerCase().includes('name'));
     const contactIdx = headers.findIndex(h => h.toLowerCase().includes('contact') || h.toLowerCase().includes('number'));
     const idIdx = headers.findIndex(h => h.toLowerCase().includes('id') || h.toLowerCase().includes('customer no'));
-    
+    const readyIdx  = headers.findIndex(h => h.toLowerCase().includes('ready') || h.toLowerCase().includes('collection'));
+    const entryIdx  = headers.findIndex(h => h.toLowerCase().includes('creation') || h.toLowerCase().includes('entry') || h.toLowerCase().includes('added'));
+    const delivIdx  = headers.findIndex(h => h.toLowerCase().includes('delivered') || h.toLowerCase().includes('status'));
+
+    // Determine today's date as a string for exact matching
+    const todayStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      
-      const name = nameIdx > -1 ? String(row[nameIdx]).toLowerCase() : "";
-      const contact = contactIdx > -1 ? String(row[contactIdx]).toLowerCase() : "";
-      const id = idIdx > -1 ? String(row[idIdx]).toLowerCase() : "";
-      
-      if (name.includes(query) || contact.includes(query) || id.includes(query)) {
-        // Build JSON object based on headers
+      let isMatch = false;
+
+      const normalizeDate = (cellVal) => {
+        if (!cellVal) return '';
+        if (cellVal instanceof Date) return Utilities.formatDate(cellVal, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        return String(cellVal).split('T')[0];
+      };
+
+      if (query === ':today:') {
+        if (readyIdx > -1 && row[readyIdx]) {
+          if (normalizeDate(row[readyIdx]) === todayStr) isMatch = true;
+        }
+      } else if (query === ':overdue:') {
+        if (readyIdx > -1 && row[readyIdx]) {
+          const rd = normalizeDate(row[readyIdx]);
+          const notDelivered = delivIdx < 0 || String(row[delivIdx]).toLowerCase() !== 'delivered';
+          if (rd < todayStr && notDelivered) isMatch = true;
+        }
+      } else if (query === ':upcoming:') {
+        if (readyIdx > -1 && row[readyIdx]) {
+          const rd = normalizeDate(row[readyIdx]);
+          const future7 = Utilities.formatDate(new Date(new Date().getTime() + 7*24*60*60*1000), Session.getScriptTimeZone(), "yyyy-MM-dd");
+          const notDelivered = delivIdx < 0 || String(row[delivIdx]).toLowerCase() !== 'delivered';
+          if (rd >= todayStr && rd <= future7 && notDelivered) isMatch = true;
+        }
+      } else if (query.startsWith(':date:ready:')) {
+        const targetDate = query.replace(':date:ready:', '').trim();
+        if (readyIdx > -1 && normalizeDate(row[readyIdx]) === targetDate) isMatch = true;
+      } else if (query.startsWith(':date:entry:')) {
+        const targetDate = query.replace(':date:entry:', '').trim();
+        if (entryIdx > -1 && normalizeDate(row[entryIdx]) === targetDate) isMatch = true;
+      } else {
+        const name    = nameIdx    > -1 ? String(row[nameIdx]).toLowerCase()    : '';
+        const contact = contactIdx > -1 ? String(row[contactIdx]).toLowerCase() : '';
+        const id      = idIdx      > -1 ? String(row[idIdx]).toLowerCase()      : '';
+        if (name.includes(query) || contact.includes(query) || id.includes(query)) isMatch = true;
+      }
+
+      if (isMatch) {
         let record = {};
         for (let j = 0; j < headers.length; j++) {
-           record[headers[j]] = row[j];
+          record[headers[j]] = row[j] instanceof Date
+            ? Utilities.formatDate(row[j], Session.getScriptTimeZone(), "yyyy-MM-dd")
+            : row[j];
         }
         results.push(record);
       }
@@ -82,14 +122,51 @@ function doGet(e) {
   }
 }
 
-// Handle POST requests (Create new customer)
+// Handle POST requests (Create new customer OR mark as delivered)
 function doPost(e) {
   try {
     let sheet = SpreadsheetApp.openById(SHEET_ID).getSheets().find(s => s.getName().trim().toLowerCase() === 'customers');
     if (!sheet) sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
     const parsedData = JSON.parse(e.postData.contents);
-    
+
+    // ── Update Status action (Ready / Delivered) ──
+    if (parsedData.action === 'updateStatus') {
+      const targetId   = String(parsedData.customerId).trim().toLowerCase();
+      const newStatus  = parsedData.status || 'Ready'; // 'Ready' or 'Delivered'
+      const data       = sheet.getDataRange().getValues();
+      const headers    = data[0];
+
+      // Find or create the "Status" column
+      let statusColIdx = headers.findIndex(h => h.toLowerCase().trim() === 'status');
+      if (statusColIdx < 0) {
+        statusColIdx = headers.length;
+        sheet.getRange(1, statusColIdx + 1).setValue('Status');
+      }
+
+      // Find the ID column
+      const idColIdx = headers.findIndex(h => h.toLowerCase().includes('id') || h.toLowerCase().includes('customer no') || h.toLowerCase().includes('number'));
+      if (idColIdx < 0) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, error: 'ID column not found' })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // Update matching rows
+      let updated = false;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][idColIdx]).trim().toLowerCase() === targetId) {
+          sheet.getRange(i + 1, statusColIdx + 1).setValue(newStatus);
+          updated = true;
+          break;
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: updated,
+        message: updated ? `Status set to ${newStatus}` : 'Customer not found'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     const customerId = parsedData.customerId;
+
     const customerName = parsedData.name;
     const contactNumber = parsedData.number;
     const creationDate = parsedData.creationDate;

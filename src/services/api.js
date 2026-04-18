@@ -1,70 +1,51 @@
 // API Service to communicate with Google Apps Script Backend
 
 // This URL needs to be updated with the Web App URL generated from Google Apps Script.
-export const API_URL = "https://script.google.com/macros/s/AKfycbxpLvkjZOYehOSOHVRMgUyyqedEM886lh-p1xjbwy7Ueddv-9Lm_DkMPYt968zZyoW8/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbwxk2ZHsAjB7hXmQHOt4FGj40gDEDN6BPO0VpopytQo8HMVo0Nn5s9r-KAVVGbR99r7/exec";
 
-/**
- * Perform a generic fetch to the Apps Script with no-cors / cors mapping.
- * Apps Script deployment responses are generally handled correctly if we treat them correctly.
- */
 export async function addCustomer(customerData) {
   if (API_URL.includes("YOUR_APPS_SCRIPT_WEB_APP_URL_HERE")) {
-    console.warn("API_URL is not set. Simulating a successful request for development.");
     return new Promise(resolve => setTimeout(() => resolve({ success: true, message: "Mock: Customer added!" }), 1500));
   }
-
   try {
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(customerData)
     });
-
-    // Using simple text or json depending on Apps Script output
-    const result = await response.json();
-    return result;
+    return await response.json();
   } catch (error) {
-    if (error.message === "Failed to fetch" || error.message.includes("NetworkError")) {
-      return {
-        success: false,
-        error: "Google Apps Script blocked the connection. Please verify two things: 1. You deployed the script with Access set exactly to 'Anyone' (not 'Anyone with Google account'). 2. After making code changes, you selected 'New version' when managing deployments."
-      };
-    }
+    return { success: false, error: error.message };
+  }
+}
+
+export async function searchCustomer(query) {
+  if (API_URL.includes("YOUR_APPS_SCRIPT_WEB_APP_URL_HERE")) {
+    return new Promise(resolve => setTimeout(() => resolve({
+      success: true,
+      data: [{ "CustomerName": "John Doe", "ContactNumber": "1234567890", "Customer No": "JD001", "CreationDate": "2026-04-18", "ReadyDate": "2026-04-25", "ImageUrl": "" }]
+    }), 1000));
+  }
+  try {
+    const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}`, { method: "GET" });
+    return await response.json();
+  } catch (error) {
     return { success: false, error: error.message };
   }
 }
 
 /**
- * Perform a search request to the Apps script
+ * Update a customer's Status ('Ready' or 'Delivered') by their Customer ID.
  */
-export async function searchCustomer(query) {
-  if (API_URL.includes("YOUR_APPS_SCRIPT_WEB_APP_URL_HERE")) {
-    console.warn("API_URL is not set. Simulating search results.");
-    return new Promise(resolve => setTimeout(() => resolve({
-      success: true,
-      data: [
-        {
-          "CustomerName": "John Doe",
-          "ContactNumber": "1234567890",
-          "Customer No": "JD001",
-          "CreationDate": "2026-04-18",
-          "ReadyDate": "2026-04-25",
-          "ImageUrl": ""
-        }
-      ]
-    }), 1000));
-  }
-
+export async function updateStatus(customerId, status) {
   try {
-    // Apps script usually needs GET parameters
-    const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}`, {
-      method: "GET"
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "updateStatus", customerId, status })
     });
-
-    const result = await response.json();
-    return result;
+    return await response.json();
   } catch (error) {
-    console.error("Error searching customer:", error);
     return { success: false, error: error.message };
   }
 }
