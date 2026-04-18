@@ -64,8 +64,9 @@ const CustomerCard = ({ customer, index = 0, onStatusChange, onSaved, onSaveStar
     return k ? customer[k] : null;
   };
 
-  const name         = getVal('name') || 'Unknown';
-  const contact      = getVal('contact') || getVal('phone') || getVal('number') || 'N/A';
+  const name         = getVal('name');
+  const contact      = getVal('contact') || getVal('phone') || getVal('number');
+  const displayName  = name || 'Unknown';
   const id           = getVal('id') || getVal('customerno') || getVal('customernumber') || 'N/A';
   const creationDate = getVal('creation') || getVal('added') || getVal('entry');
   const readyDate    = getVal('ready');
@@ -126,7 +127,7 @@ const CustomerCard = ({ customer, index = 0, onStatusChange, onSaved, onSaveStar
             {/* Name + status badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <User size={16} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#818CF8'} style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: '17px', fontWeight: '700', color: '#F1F5F9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+              <span style={{ fontSize: '17px', fontWeight: '700', color: '#F1F5F9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</span>
               {(isReady || isDelivered) && (
                 <span style={{
                   fontSize: '9px', fontWeight: '800', letterSpacing: '1px', padding: '2px 7px',
@@ -141,18 +142,24 @@ const CustomerCard = ({ customer, index = 0, onStatusChange, onSaved, onSaveStar
             </div>
 
             {/* Info rows */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
-              <Phone size={13} color="#64748B" /> {contact}
-            </div>
+            {contact && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
+                <Phone size={13} color="#64748B" /> {contact}
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
               <CheckSquare size={13} color="#64748B" /> ID: {id}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
-              <Calendar size={13} color="#64748B" /> Added: {formatDate(creationDate)}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#94A3B8' }}>
-              <Calendar size={13} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#64748B'} /> Ready: {formatDate(readyDate)}
-            </div>
+            {creationDate && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
+                <Calendar size={13} color="#64748B" /> Added: {formatDate(creationDate)}
+              </div>
+            )}
+            {readyDate && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#94A3B8' }}>
+                <Calendar size={13} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#64748B'} /> Ready: {formatDate(readyDate)}
+              </div>
+            )}
           </div>
 
           {/* Right: square image */}
@@ -265,21 +272,27 @@ const CustomerCard = ({ customer, index = 0, onStatusChange, onSaved, onSaveStar
               </div>
             )}
 
-            <h1 style={{ fontSize:'22px', marginBottom:'5px', color:'#fff' }}>{name}</h1>
+            <h1 style={{ fontSize:'22px', marginBottom:'5px', color:'#fff' }}>{displayName}</h1>
             <span style={{ display:'inline-block', padding:'3px 12px', background:'rgba(129,140,248,0.15)', color:'#818CF8', borderRadius:'20px', fontSize:'12px', marginBottom:'14px' }}>
               Customer No: {id}
             </span>
 
             <div className="glass-card" style={{ display:'flex', flexDirection:'column', gap:'12px', marginBottom:'14px', fontSize:'13px' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'10px' }}>
-                <span style={{ color:'#94A3B8' }}>Contact</span><span style={{ color:'#fff', fontWeight:'500' }}>{contact}</span>
-              </div>
-              <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'10px' }}>
-                <span style={{ color:'#94A3B8' }}>Entry Date</span><span style={{ color:'#fff', fontWeight:'500' }}>{formatDate(creationDate)}</span>
-              </div>
-              <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'10px' }}>
-                <span style={{ color:'#10B981' }}>Collection Date</span><span style={{ color:'#10B981', fontWeight:'700' }}>{formatDate(readyDate)}</span>
-              </div>
+              {contact && (
+                <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'10px' }}>
+                  <span style={{ color:'#94A3B8' }}>Contact</span><span style={{ color:'#fff', fontWeight:'500' }}>{contact}</span>
+                </div>
+              )}
+              {creationDate && (
+                <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'10px' }}>
+                  <span style={{ color:'#94A3B8' }}>Entry Date</span><span style={{ color:'#fff', fontWeight:'500' }}>{formatDate(creationDate)}</span>
+                </div>
+              )}
+              {readyDate && (
+                <div style={{ display:'flex', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.07)', paddingBottom:'10px' }}>
+                  <span style={{ color:'#10B981' }}>Collection Date</span><span style={{ color:'#10B981', fontWeight:'700' }}>{formatDate(readyDate)}</span>
+                </div>
+              )}
               <div style={{ display:'flex', justifyContent:'space-between' }}>
                 <span style={{ color:'#94A3B8' }}>Status</span>
                 <span style={{ fontWeight:'700', color: isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#64748B' }}>

@@ -45,8 +45,8 @@ const AddCustomer = () => {
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!formData.customerId || !formData.name || !formData.number || !formData.readyDate) {
-      setStatus({ type: 'error', message: 'Please fill all required fields.' });
+    if (!formData.customerId) {
+      setStatus({ type: 'error', message: 'Customer Number is required.' });
       return;
     }
     setIsSubmitting(true);
@@ -103,14 +103,14 @@ const AddCustomer = () => {
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
             <div>
-              <Label icon={User}>Full Name *</Label>
+              <Label icon={User}>Full Name</Label>
               <input type="text" name="name" value={formData.name} onChange={handleChange}
-                placeholder="Ahmed Khan" required style={inp} onFocus={focusIn} onBlur={focusOut} />
+                placeholder="Ahmed Khan" style={inp} onFocus={focusIn} onBlur={focusOut} />
             </div>
             <div>
-              <Label icon={Phone}>Contact *</Label>
+              <Label icon={Phone}>Contact</Label>
               <input type="number" name="number" value={formData.number} onChange={handleChange}
-                placeholder="9876543210" required style={inp} onFocus={focusIn} onBlur={focusOut} />
+                placeholder="9876543210" style={inp} onFocus={focusIn} onBlur={focusOut} />
             </div>
           </div>
 
@@ -118,12 +118,12 @@ const AddCustomer = () => {
             <div>
               <Label icon={Calendar}>Entry Date</Label>
               <input type="date" name="creationDate" value={formData.creationDate} onChange={handleChange}
-                required style={{ ...inp, colorScheme:'dark' }} onFocus={focusIn} onBlur={focusOut} />
+                style={{ ...inp, colorScheme:'dark' }} onFocus={focusIn} onBlur={focusOut} />
             </div>
             <div>
-              <Label icon={Calendar} color="#10B981">Ready Date *</Label>
+              <Label icon={Calendar} color="#10B981">Ready Date</Label>
               <input type="date" name="readyDate" value={formData.readyDate} onChange={handleChange}
-                required style={{ ...inp, colorScheme:'dark' }} onFocus={focusInG} onBlur={focusOut} />
+                style={{ ...inp, colorScheme:'dark' }} onFocus={focusInG} onBlur={focusOut} />
             </div>
           </div>
 
