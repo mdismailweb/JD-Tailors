@@ -27,7 +27,10 @@ export async function searchCustomer(query) {
     }), 1000));
   }
   try {
-    const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}&t=${Date.now()}`, { method: "GET" });
+    const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}&t=${Date.now()}`, {
+      method: "GET",
+      cache: "no-store"
+    });
     return await response.json();
   } catch (error) {
     return { success: false, error: error.message };
