@@ -85,6 +85,8 @@ function doGet(e) {
           const notDelivered = delivIdx < 0 || String(row[delivIdx]).toLowerCase() !== 'delivered';
           if (rd >= todayStr && rd <= future7 && notDelivered) isMatch = true;
         }
+      } else if (query === ':delivered:') {
+        if (delivIdx > -1 && String(row[delivIdx]).toLowerCase() === 'delivered') isMatch = true;
       } else if (query.startsWith(':date:ready:')) {
         const targetDate = query.replace(':date:ready:', '').trim();
         if (readyIdx > -1 && normalizeDate(row[readyIdx]) === targetDate) isMatch = true;

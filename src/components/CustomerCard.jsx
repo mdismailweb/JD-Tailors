@@ -26,24 +26,24 @@ const ActionBtn = ({ label, icon: Icon, color, bg, border, onClick, loading, dis
     onClick={e => { e.stopPropagation(); if (!disabled && !loading) onClick(); }}
     disabled={disabled || loading}
     style={{
-      flex: 1, padding: '7px 6px',
+      flex: 1, padding: '9px 6px',
       background: disabled ? 'rgba(255,255,255,0.04)' : bg,
       border: `1px solid ${disabled ? 'rgba(255,255,255,0.08)' : border}`,
       borderRadius: '10px', color: disabled ? '#475569' : color,
-      fontSize: '12px', fontWeight: '700', cursor: disabled ? 'default' : 'pointer',
+      fontSize: '13px', fontWeight: '700', cursor: disabled ? 'default' : 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
       transition: 'all 0.2s ease',
     }}
   >
     {loading
-      ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
-      : <Icon size={13} />
+      ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
+      : <Icon size={14} />
     }
     {label}
   </button>
 );
 
-const CustomerCard = ({ customer, index = 0, onStatusChange }) => {
+const CustomerCard = ({ customer, index = 0, onStatusChange, onSaved, onSaveStart, onSaveEnd }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [imageRotation, setImageRotation] = useState(0);
@@ -83,14 +83,14 @@ const CustomerCard = ({ customer, index = 0, onStatusChange }) => {
   }
 
   const handleUpdate = async (newStatus) => {
+    if (savingStatus) return;
     setSavingStatus(newStatus);
-    const res = await updateStatus(id, newStatus);
-    if (res.success) {
-      setLocalStatus(newStatus);
-      onStatusChange?.();
-    }
-    setSavingStatus(null);
+    await updateStatus(id, newStatus);  // 1. write to sheet
+    await onStatusChange?.();           // 2. parent fetches fresh data from sheet
+    setSavingStatus(null);              // 3. clear spinner
   };
+
+
 
   /* ── Status colors ── */
   const stampProps = isDelivered
@@ -105,71 +105,82 @@ const CustomerCard = ({ customer, index = 0, onStatusChange }) => {
 
   return (
     <>
-      {/* ═══════════ LIST CARD ═══════════ */}
+      {/* ═══════════ LIST CARD (horizontal) ═══════════ */}
       <div
         className="glass-card"
         onClick={() => setIsModalOpen(true)}
         style={{
           marginBottom: '12px', position: 'relative', overflow: 'hidden',
           animation: `fade-in 0.3s ease-out ${index * 0.08}s forwards`, opacity: 0,
-          cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s',
-          border: cardBorder,
+          cursor: 'pointer', transition: 'transform 0.2s',
+          border: cardBorder, padding: '12px',
         }}
-        onMouseOver={e => { e.currentTarget.style.transform='scale(1.01)'; }}
+        onMouseOver={e => { if (!savingStatus) e.currentTarget.style.transform='scale(1.01)'; }}
         onMouseOut={e => { e.currentTarget.style.transform='scale(1)'; }}
       >
-        {/* Photo strip */}
-        {displayUrl && (
-          <div style={{ height: '100px', marginBottom: '10px', borderRadius: '10px', overflow: 'hidden', background: '#1E293B', position: 'relative' }}>
-            <img src={displayUrl} alt="Customer"
-              style={{ width: '100%', height: '100%', objectFit: 'cover', filter: (isReady || isDelivered) ? 'brightness(0.55)' : 'none' }}
-              onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
-            />
-            <div style={{ display:'none', position:'absolute', inset:0, alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', color:'#fff', fontSize:'12px' }}>Image blocked</div>
-            {(isReady || isDelivered) && <Stamp {...stampProps} />}
-          </div>
-        )}
+        {/* ── Top row: info left + image right ── */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '10px' }}>
 
-        {/* No-photo stamp row */}
-        {!displayUrl && (isReady || isDelivered) && (
-          <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'6px' }}>
-            <span style={{
-              fontSize: '10px', fontWeight: '800', letterSpacing: '1.5px', padding: '3px 10px',
-              border: `1px solid ${isDelivered ? 'rgba(16,185,129,0.6)' : 'rgba(245,158,11,0.6)'}`,
-              borderRadius: '5px',
-              color: isDelivered ? '#10B981' : '#F59E0B',
-              background: isDelivered ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-            }}>
-              {isDelivered ? 'DELIVERED' : 'READY'}
-            </span>
-          </div>
-        )}
+          {/* Left: text info */}
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {/* Name + status badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <User size={16} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#818CF8'} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '17px', fontWeight: '700', color: '#F1F5F9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+              {(isReady || isDelivered) && (
+                <span style={{
+                  fontSize: '9px', fontWeight: '800', letterSpacing: '1px', padding: '2px 7px',
+                  border: `1px solid ${isDelivered ? 'rgba(16,185,129,0.5)' : 'rgba(245,158,11,0.5)'}`,
+                  borderRadius: '4px', flexShrink: 0,
+                  color: isDelivered ? '#10B981' : '#F59E0B',
+                  background: isDelivered ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.08)',
+                }}>
+                  {isDelivered ? 'DELIVERED' : 'READY'}
+                </span>
+              )}
+            </div>
 
-        {/* Name row */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'8px' }}>
-          <h2 style={{ fontSize:'16px', display:'flex', alignItems:'center', gap:'6px', flex:1, minWidth:0 }}>
-            <User size={15} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#818CF8'} style={{ flexShrink:0 }} />
-            <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{name}</span>
-          </h2>
+            {/* Info rows */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
+              <Phone size={13} color="#64748B" /> {contact}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
+              <CheckSquare size={13} color="#64748B" /> ID: {id}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94A3B8', fontSize: '14px' }}>
+              <Calendar size={13} color="#64748B" /> Added: {formatDate(creationDate)}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#94A3B8' }}>
+              <Calendar size={13} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#64748B'} /> Ready: {formatDate(readyDate)}
+            </div>
+          </div>
+
+          {/* Right: square image */}
+          {displayUrl && (
+            <div style={{ width: '96px', height: '108px', flexShrink: 0, borderRadius: '12px', overflow: 'hidden', background: '#1E293B', position: 'relative' }}>
+              <img src={displayUrl} alt="Customer"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: (isReady || isDelivered) ? 'brightness(0.5)' : 'none' }}
+                onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+              />
+              <div style={{ display:'none', position:'absolute', inset:0, alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.5)', color:'#fff', fontSize:'10px', textAlign:'center', padding:'4px' }}>No img</div>
+              {(isReady || isDelivered) && (
+                <div style={{
+                  position:'absolute', top:'50%', left:'50%',
+                  transform:'translate(-50%,-50%) rotate(-22deg)',
+                  border:`2px solid ${isDelivered ? 'rgba(16,185,129,0.85)' : 'rgba(245,158,11,0.85)'}`,
+                  borderRadius:'4px', padding:'2px 6px',
+                  color: isDelivered ? 'rgba(16,185,129,0.95)' : 'rgba(245,158,11,0.95)',
+                  fontSize:'10px', fontWeight:'900', letterSpacing:'2px',
+                  whiteSpace:'nowrap', pointerEvents:'none',
+                }}>
+                  {isDelivered ? 'DELIVERED' : 'READY'}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Info grid */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px', marginBottom:'12px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'5px', color:'#94A3B8', fontSize:'12px' }}>
-            <Phone size={12} color="#64748B" /> {contact}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'5px', color:'#94A3B8', fontSize:'12px' }}>
-            <CheckSquare size={12} color="#64748B" /> {id}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'5px', color:'#94A3B8', fontSize:'12px' }}>
-            <Calendar size={12} color="#64748B" /> {formatDate(creationDate)}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'5px', color: isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#94A3B8', fontSize:'12px' }}>
-            <Calendar size={12} color={isDelivered ? '#10B981' : isReady ? '#F59E0B' : '#64748B'} /> {formatDate(readyDate)}
-          </div>
-        </div>
-
-        {/* Action buttons — always visible on card */}
+        {/* ── Bottom: action buttons full width ── */}
         <div style={{ display:'flex', gap:'8px' }} onClick={e => e.stopPropagation()}>
           <ActionBtn
             label="Mark Ready"
@@ -193,6 +204,7 @@ const CustomerCard = ({ customer, index = 0, onStatusChange }) => {
           />
         </div>
       </div>
+
 
       {/* ═══════════ DETAIL MODAL ═══════════ */}
       {isModalOpen && (

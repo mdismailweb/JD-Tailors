@@ -1,7 +1,7 @@
 // API Service to communicate with Google Apps Script Backend
 
 // This URL needs to be updated with the Web App URL generated from Google Apps Script.
-export const API_URL = "https://script.google.com/macros/s/AKfycbwxk2ZHsAjB7hXmQHOt4FGj40gDEDN6BPO0VpopytQo8HMVo0Nn5s9r-KAVVGbR99r7/exec";
+export const API_URL = "https://script.google.com/macros/s/AKfycbwUSAwFYEUtGy66XAZ9acHPLEgBISgSn7zLpR2k9sCq1ZJuVlL5FAI3CPyBswTRYvDU/exec";
 
 export async function addCustomer(customerData) {
   if (API_URL.includes("YOUR_APPS_SCRIPT_WEB_APP_URL_HERE")) {
@@ -27,7 +27,7 @@ export async function searchCustomer(query) {
     }), 1000));
   }
   try {
-    const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}`, { method: "GET" });
+    const response = await fetch(`${API_URL}?query=${encodeURIComponent(query)}&t=${Date.now()}`, { method: "GET" });
     return await response.json();
   } catch (error) {
     return { success: false, error: error.message };

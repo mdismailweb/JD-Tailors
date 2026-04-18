@@ -32,6 +32,7 @@ function App() {
     };
 
     const handleBeforeUnload = (e) => {
+      if (window.__intentionalReload) return; // skip popup for app-triggered reloads
       e.preventDefault();
       e.returnValue = '';
     };
@@ -45,13 +46,14 @@ function App() {
     };
   }, []);
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
-    // Bump key to signal all consuming pages to re-fetch
-    setRefreshKey(prev => prev + 1);
-    // Give a brief moment so the animation feels real, then stop spinner
-    setTimeout(() => setIsRefreshing(false), 1200);
+    // Brief spinner then silent reload — no popup
+    setTimeout(() => {
+      window.__intentionalReload = true;
+      window.location.reload();
+    }, 400);
   };
 
   return (

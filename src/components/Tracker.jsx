@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { PackageSearch, Clock, AlertTriangle, CalendarClock } from 'lucide-react';
+import { PackageSearch, Clock, AlertTriangle, CalendarClock, PackageCheck } from 'lucide-react';
 import { searchCustomer } from '../services/api';
 import CustomerCard from './CustomerCard';
 import { RefreshContext } from '../App';
@@ -10,28 +10,33 @@ const TABS = [
     query: ':upcoming:',
     label: 'To Be Readied',
     icon: CalendarClock,
-    accent: '#818CF8',        // indigo
+    accent: '#818CF8',
     accentAlpha: 'rgba(129,140,248,',
-    badgeEmpty: 'rgba(129,140,248,0.15)',
-    badgeText: '#818CF8',
-    badgeBorder: 'rgba(129,140,248,0.3)',
     emptyTitle: 'All clear for next 7 days!',
     emptyDesc: 'No orders are due in the coming week.',
-    warningText: (n) => `${n} order${n!==1?'s':''} due for readying in the next 7 days.`,
+    warningText: (n) => `${n} order${n!==1?'s':''} due in the next 7 days.`,
   },
   {
     id: 'overdue',
     query: ':overdue:',
     label: 'Overdue',
     icon: AlertTriangle,
-    accent: '#F87171',        // red
+    accent: '#F87171',
     accentAlpha: 'rgba(248,113,113,',
-    badgeEmpty: 'rgba(248,113,113,0.15)',
-    badgeText: '#F87171',
-    badgeBorder: 'rgba(248,113,113,0.3)',
     emptyTitle: 'No overdue orders! 🎉',
     emptyDesc: 'Every order is on track.',
-    warningText: (n) => `${n} order${n!==1?'s':''} past the ready date awaiting collection.`,
+    warningText: (n) => `${n} order${n!==1?'s':''} past the ready date.`,
+  },
+  {
+    id: 'delivered',
+    query: ':delivered:',
+    label: 'Delivered',
+    icon: PackageCheck,
+    accent: '#10B981',
+    accentAlpha: 'rgba(16,185,129,',
+    emptyTitle: 'No deliveries yet',
+    emptyDesc: 'Delivered orders will appear here.',
+    warningText: (n) => `${n} order${n!==1?'s':''} successfully delivered.`,
   },
 ];
 
@@ -51,8 +56,9 @@ const SkeletonCard = () => (
 
 const Tracker = () => {
   const [activeTab, setActiveTab] = useState('upcoming');
-  const [data, setData]           = useState({ upcoming: null, overdue: null });
-  const [loading, setLoading]     = useState({ upcoming: false, overdue: false });
+  const [data, setData]           = useState({ upcoming: null, overdue: null, delivered: null });
+  const [loading, setLoading]     = useState({ upcoming: false, overdue: false, delivered: false });
+  const [isSaving, setIsSaving]   = useState(false);
   const { refreshKey }            = useContext(RefreshContext);
 
   const fetchTab = useCallback(async (tabId, query) => {
@@ -90,7 +96,27 @@ const Tracker = () => {
   });
 
   return (
-    <div style={{ animation:'fadeUp 0.5s ease-out' }}>
+    <div style={{ animation:'fadeUp 0.5s ease-out', position: 'relative' }}>
+
+      {/* ── Full-screen saving loader ── */}
+      {isSaving && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(7,10,22,0.88)', backdropFilter: 'blur(8px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px',
+        }}>
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '50%',
+            border: '4px solid rgba(129,140,248,0.2)',
+            borderTopColor: '#818CF8',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: '#fff', marginBottom: '4px' }}>Saving…</div>
+            <div style={{ fontSize: '13px', color: '#64748B' }}>Updating Google Sheet</div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{
@@ -174,7 +200,9 @@ const Tracker = () => {
               key={index}
               customer={customer}
               index={index}
-              onStatusChange={() => fetchTab(activeTab, tab.query)}
+              onStatusChange={async () => {
+                await Promise.all(TABS.map(t => fetchTab(t.id, t.query)));
+              }}
             />
           ))}
         </div>
